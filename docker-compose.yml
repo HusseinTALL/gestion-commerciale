@@ -1,6 +1,53 @@
 version: '3.9'
 
 services:
+  # ─── KAFKA (KRaft mode — no Zookeeper) ───────────────────────────────────
+  kafka:
+    image: bitnami/kafka:3.6
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka-data:/bitnami/kafka
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    networks:
+      - gestion-net
+
+  # ─── REDIS ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - gestion-net
+
+  # ─── FRONTEND ─────────────────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - gateway
+    networks:
+      - gestion-net
+
   # ─── GATEWAY ──────────────────────────────────────────────────────────────
   gateway:
     build: ./gateway
@@ -31,6 +78,7 @@ services:
         condition: service_healthy
     networks:
       - gestion-net
+    restart: unless-stopped
 
   user-db:
     image: postgres:16-alpine
@@ -55,11 +103,15 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sale-db:5432/sale_db
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3002
+      KAFKA_BROKERS: kafka:9092
     depends_on:
       sale-db:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - gestion-net
+    restart: unless-stopped
 
   sale-db:
     image: postgres:16-alpine
@@ -113,11 +165,18 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@commission-db:5432/commission_db
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3004
+      KAFKA_BROKERS: kafka:9092
+      REDIS_URL: redis://redis:6379
     depends_on:
       commission-db:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - gestion-net
+    restart: unless-stopped
 
   commission-db:
     image: postgres:16-alpine
@@ -294,3 +353,5 @@ volumes:
   stock-db-data:
   content-db-data:
   notification-db-data:
+  kafka-data:
+  redis-data:

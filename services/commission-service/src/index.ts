@@ -1,4 +1,6 @@
 import express from 'express';
+import { commissionsRouter } from './routes/commissions';
+import { startConsumer } from './events/consumer';
 
 const app = express();
 const PORT = process.env.PORT ?? 3004;
@@ -9,12 +11,16 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'commission-service' });
 });
 
-// TODO: importer et monter les routes ici
-// import { router } from './routes';
-// app.use('/api', router);
+app.use('/api/commissions', commissionsRouter);
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`[commission-service] Running on port ${PORT}`);
+  // Démarrer le consommateur Kafka
+  try {
+    await startConsumer();
+  } catch (err) {
+    console.error('[commission-service] Kafka consumer failed to start:', err);
+  }
 });
 
 export default app;
