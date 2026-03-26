@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CommissionStatus {
+  PENDING
+  VALIDATED
+  PAID
+}
+
+model CommissionGrid {
+  id                 String             @id @default(uuid())
+  productCategory    String             @map("product_category")
+  thicknessMin       Decimal            @map("thickness_min") @db.Decimal(5, 2)
+  thicknessMax       Decimal            @map("thickness_max") @db.Decimal(5, 2)
+  monthlyVolumeMin   Decimal            @map("monthly_volume_min") @db.Decimal(14, 2)
+  monthlyVolumeMax   Decimal            @map("monthly_volume_max") @db.Decimal(14, 2)
+  ratePercent        Decimal            @map("rate_percent") @db.Decimal(5, 2)
+  effectiveFrom      DateTime           @map("effective_from") @db.Date
+  isActive           Boolean            @default(true) @map("is_active")
+  entries            CommissionEntry[]
+
+  @@map("commission_grids")
+}
+
+model CommissionEntry {
+  id                    String           @id @default(uuid())
+  salespersonId         String           @map("salesperson_id")
+  saleId                String           @map("sale_id")
+  saleLineId            String           @map("sale_line_id")
+  gridId                String           @map("grid_id")
+  baseAmount            Decimal          @map("base_amount") @db.Decimal(14, 2)
+  rateApplied           Decimal          @map("rate_applied") @db.Decimal(5, 2)
+  commissionAmount      Decimal          @map("commission_amount") @db.Decimal(14, 2)
+  calculationDate       DateTime         @map("calculation_date") @db.Date
+  status                CommissionStatus @default(PENDING)
+  grid                  CommissionGrid   @relation(fields: [gridId], references: [id])
+
+  @@map("commission_entries")
+}
+
+model CommissionDailySummary {
+  id               String   @id @default(uuid())
+  salespersonId    String   @map("salesperson_id")
+  summaryDate      DateTime @map("summary_date") @db.Date
+  totalSales       Decimal  @map("total_sales") @db.Decimal(14, 2)
+  totalCommission  Decimal  @map("total_commission") @db.Decimal(14, 2)
+  saleCount        Int      @map("sale_count")
+  cumulMonth       Decimal  @map("cumul_month") @db.Decimal(14, 2)
+
+  @@unique([salespersonId, summaryDate])
+  @@map("commission_daily_summaries")
+}
