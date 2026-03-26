@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CASHIER
+  COMMERCIAL
+  MANAGER
+  DIRECTOR
+  ADMIN
+}
+
+model User {
+  id            String             @id @default(uuid())
+  name          String
+  email         String             @unique
+  passwordHash  String             @map("password_hash")
+  role          Role
+  isActive      Boolean            @default(true) @map("is_active")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  profile       CommercialProfile?
+
+  @@map("users")
+}
+
+model CommercialProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+  zone           String
+  monthlyTarget  Decimal  @map("monthly_target") @db.Decimal(12, 2)
+  phone          String
+  hireDate       DateTime @map("hire_date") @db.Date
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("commercial_profiles")
+}

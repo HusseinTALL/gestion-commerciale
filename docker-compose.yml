@@ -1,0 +1,296 @@
+version: '3.9'
+
+services:
+  # ─── GATEWAY ──────────────────────────────────────────────────────────────
+  gateway:
+    build: ./gateway
+    ports:
+      - "80:80"
+    depends_on:
+      - user-service
+      - sale-service
+      - crm-service
+      - commission-service
+      - planning-service
+      - ristourne-service
+      - stock-service
+      - content-service
+      - notification-service
+    networks:
+      - gestion-net
+
+  # ─── USER SERVICE ─────────────────────────────────────────────────────────
+  user-service:
+    build: ./services/user-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@user-db:5432/user_db
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3001
+    depends_on:
+      user-db:
+        condition: service_healthy
+    networks:
+      - gestion-net
+
+  user-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: user_db
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d user_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gestion-net
+
+  # ─── SALE SERVICE ─────────────────────────────────────────────────────────
+  sale-service:
+    build: ./services/sale-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sale-db:5432/sale_db
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3002
+    depends_on:
+      sale-db:
+        condition: service_healthy
+    networks:
+      - gestion-net
+
+  sale-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: sale_db
+    volumes:
+      - sale-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d sale_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gestion-net
+
+  # ─── CRM SERVICE ──────────────────────────────────────────────────────────
+  crm-service:
+    build: ./services/crm-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@crm-db:5432/crm_db
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3003
+    depends_on:
+      crm-db:
+        condition: service_healthy
+    networks:
+      - gestion-net
+
+  crm-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: crm_db
+    volumes:
+      - crm-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d crm_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gestion-net
+
+  # ─── COMMISSION SERVICE ───────────────────────────────────────────────────
+  commission-service:
+    build: ./services/commission-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@commission-db:5432/commission_db
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3004
+    depends_on:
+      commission-db:
+        condition: service_healthy
+    networks:
+      - gestion-net
+
+  commission-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: commission_db
+    volumes:
+      - commission-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d commission_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gestion-net
+
+  # ─── PLANNING SERVICE ─────────────────────────────────────────────────────
+  planning-service:
+    build: ./services/planning-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@planning-db:5432/planning_db
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3005
+    depends_on:
+      planning-db:
+        condition: service_healthy
+    networks:
+      - gestion-net
+
+  planning-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: planning_db
+    volumes:
+      - planning-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d planning_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gestion-net
+
+  # ─── RISTOURNE SERVICE ────────────────────────────────────────────────────
+  ristourne-service:
+    build: ./services/ristourne-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@ristourne-db:5432/ristourne_db
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3006
+    depends_on:
+      ristourne-db:
+        condition: service_healthy
+    networks:
+      - gestion-net
+
+  ristourne-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ristourne_db
+    volumes:
+      - ristourne-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ristourne_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gestion-net
+
+  # ─── STOCK SERVICE ────────────────────────────────────────────────────────
+  stock-service:
+    build: ./services/stock-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@stock-db:5432/stock_db
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3007
+    depends_on:
+      stock-db:
+        condition: service_healthy
+    networks:
+      - gestion-net
+
+  stock-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: stock_db
+    volumes:
+      - stock-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d stock_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gestion-net
+
+  # ─── CONTENT SERVICE ──────────────────────────────────────────────────────
+  content-service:
+    build: ./services/content-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@content-db:5432/content_db
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3008
+    depends_on:
+      content-db:
+        condition: service_healthy
+    networks:
+      - gestion-net
+
+  content-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: content_db
+    volumes:
+      - content-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d content_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gestion-net
+
+  # ─── NOTIFICATION SERVICE ─────────────────────────────────────────────────
+  notification-service:
+    build: ./services/notification-service
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@notification-db:5432/notification_db
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3009
+    depends_on:
+      notification-db:
+        condition: service_healthy
+    networks:
+      - gestion-net
+
+  notification-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: notification_db
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d notification_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gestion-net
+
+networks:
+  gestion-net:
+    driver: bridge
+
+volumes:
+  user-db-data:
+  sale-db-data:
+  crm-db-data:
+  commission-db-data:
+  planning-db-data:
+  ristourne-db-data:
+  stock-db-data:
+  content-db-data:
+  notification-db-data:

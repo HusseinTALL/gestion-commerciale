@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PartnerTier {
+  BRONZE
+  SILVER
+  GOLD
+}
+
+model PartnerTierConfig {
+  id                    String      @id @default(uuid())
+  tier                  PartnerTier @unique
+  volumeThreshold       Decimal     @map("volume_threshold") @db.Decimal(14, 2)
+  discountRate          Decimal     @map("discount_rate") @db.Decimal(5, 2)
+  freeDeliveryPriority  Boolean     @default(false) @map("free_delivery_priority")
+  dedicatedSupport      Boolean     @default(false) @map("dedicated_support")
+  exclusiveOffersAccess Boolean     @default(false) @map("exclusive_offers_access")
+  effectiveFrom         DateTime    @map("effective_from") @db.Date
+  entries               RistourneEntry[]
+
+  @@map("partner_tier_configs")
+}
+
+model RistourneEntry {
+  id             String            @id @default(uuid())
+  clientId       String            @map("client_id")
+  saleId         String            @map("sale_id")
+  tierConfigId   String            @map("tier_config_id")
+  tierApplied    PartnerTier       @map("tier_applied")
+  discountAmount Decimal           @map("discount_amount") @db.Decimal(14, 2)
+  appliedAt      DateTime          @default(now()) @map("applied_at")
+  tierConfig     PartnerTierConfig @relation(fields: [tierConfigId], references: [id])
+
+  @@map("ristourne_entries")
+}

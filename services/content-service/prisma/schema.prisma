@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ContentCategory {
+  INSTALLATION
+  PRODUIT
+  SECURITE
+  USAGE
+}
+
+enum FileType {
+  VIDEO
+  PDF
+  IMAGE
+}
+
+enum DeliveryChannel {
+  WHATSAPP
+  SMS
+  EMAIL
+}
+
+enum DeliveryStatus {
+  SENT
+  FAILED
+}
+
+model ContentResource {
+  id          String            @id @default(uuid())
+  title       String
+  description String?
+  category    ContentCategory
+  fileUrl     String            @map("file_url")
+  fileType    FileType          @map("file_type")
+  isActive    Boolean           @default(true) @map("is_active")
+  uploadedBy  String            @map("uploaded_by")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  deliveries  ContentDelivery[]
+
+  @@map("content_resources")
+}
+
+model ContentDelivery {
+  id         String          @id @default(uuid())
+  resourceId String          @map("resource_id")
+  clientId   String          @map("client_id")
+  sentBy     String          @map("sent_by")
+  channel    DeliveryChannel
+  sentAt     DateTime        @default(now()) @map("sent_at")
+  status     DeliveryStatus
+  resource   ContentResource @relation(fields: [resourceId], references: [id])
+
+  @@map("content_deliveries")
+}

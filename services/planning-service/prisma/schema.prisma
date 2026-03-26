@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DayTheme {
+  GROSSISSEMENT
+  CONQUETE
+  RELANCE
+  FIDELISATION
+  BILAN
+}
+
+enum DeliveryStatus {
+  PLANNED
+  DELIVERED
+  CANCELLED
+}
+
+model WeeklyPlan {
+  id             String         @id @default(uuid())
+  weekNumber     Int            @map("week_number")
+  year           Int
+  themeMonday    DayTheme       @map("theme_monday")
+  themeTuesday   DayTheme       @map("theme_tuesday")
+  themeWednesday DayTheme       @map("theme_wednesday")
+  themeThursday  DayTheme       @map("theme_thursday")
+  themeFriday    DayTheme       @map("theme_friday")
+  managerId      String         @map("manager_id")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  deliveries     FreeDelivery[]
+
+  @@unique([weekNumber, year])
+  @@map("weekly_plans")
+}
+
+model FreeDelivery {
+  id           String         @id @default(uuid())
+  weeklyPlanId String         @map("weekly_plan_id")
+  clientId     String         @map("client_id")
+  commercialId String         @map("commercial_id")
+  status       DeliveryStatus @default(PLANNED)
+  approvedBy   String?        @map("approved_by")
+  deliveryDate DateTime?      @map("delivery_date")
+  notes        String?
+  plan         WeeklyPlan     @relation(fields: [weeklyPlanId], references: [id])
+
+  @@map("free_deliveries")
+}

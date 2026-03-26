@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ClientStatus {
+  NEW
+  ACTIVE
+  INACTIVE
+  PROSPECT
+}
+
+enum PartnerTier {
+  BRONZE
+  SILVER
+  GOLD
+}
+
+enum VisitType {
+  GROSSISSEMENT
+  CONQUETE
+  RELANCE
+  FIDELISATION
+}
+
+enum VisitResult {
+  ORDER
+  INTEREST
+  REFUSAL
+  ABSENT
+}
+
+model Client {
+  id                    String        @id @default(uuid())
+  name                  String
+  phone                 String        @unique
+  address               String?
+  zone                  String
+  assignedCommercialId  String?       @map("assigned_commercial_id")
+  status                ClientStatus  @default(NEW)
+  partnerTier           PartnerTier?  @map("partner_tier")
+  cumulativeVolume30d   Decimal       @default(0) @map("cumulative_volume_30d") @db.Decimal(14, 2)
+  lastVisit             DateTime?     @map("last_visit")
+  lastPurchase          DateTime?     @map("last_purchase")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  visits                ClientVisit[]
+
+  @@map("clients")
+}
+
+model ClientVisit {
+  id           String      @id @default(uuid())
+  clientId     String      @map("client_id")
+  commercialId String      @map("commercial_id")
+  visitDate    DateTime    @map("visit_date")
+  visitType    VisitType   @map("visit_type")
+  result       VisitResult
+  notes        String?
+  client       Client      @relation(fields: [clientId], references: [id])
+
+  @@map("client_visits")
+}
