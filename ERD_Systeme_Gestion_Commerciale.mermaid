@@ -1,0 +1,267 @@
+erDiagram
+
+%% ═══════════════════════════════════════════════════════════════
+%% ERD — Système de Gestion Commerciale
+%% Microservices : database-per-service pattern
+%% Relations logiques (cross-service via IDs, pas de FK réelles)
+%% ═══════════════════════════════════════════════════════════════
+
+%% ── USER SERVICE ───────────────────────────────────────────────
+USER {
+    uuid        id              PK
+    string      name
+    string      email           UK
+    string      password_hash
+    enum        role            "CASHIER|COMMERCIAL|MANAGER|DIRECTOR|ADMIN"
+    boolean     is_active
+    timestamp   created_at
+    timestamp   updated_at
+}
+
+COMMERCIAL_PROFILE {
+    uuid        id              PK
+    uuid        user_id         FK
+    string      zone
+    decimal     monthly_target
+    string      phone
+    date        hire_date
+}
+
+USER ||--|| COMMERCIAL_PROFILE : "has profile"
+
+%% ── SALE SERVICE ───────────────────────────────────────────────
+PRODUCT {
+    uuid        id              PK
+    string      name
+    enum        category        "TOLE_COLOREE|TOLE_ALUZINC|TOLE_PRELAQUE|CROCHET|TUBE_RECT"
+    boolean     is_active
+}
+
+PRODUCT_VARIANT {
+    uuid        id              PK
+    uuid        product_id      FK
+    decimal     thickness
+    string      color
+    decimal     default_price
+    boolean     is_active
+}
+
+SALE {
+    uuid        id              PK
+    string      sale_code       UK  "VTE-AAAAMMJJ-XXXX"
+    date        sale_date
+    uuid        salesperson_id  "ref USER"
+    string      buyer_phone
+    string      buyer_name
+    decimal     total_gross
+    decimal     total_collected
+    decimal     total_discount
+    string      notes
+    enum        status          "DRAFT|VALIDATED|CANCELLED"
+    uuid        created_by      "ref USER (caissiere)"
+    timestamp   created_at
+}
+
+SALE_LINE {
+    uuid        id              PK
+    uuid        sale_id         FK
+    uuid        product_variant_id "ref PRODUCT_VARIANT"
+    decimal     unit_length
+    int         quantity
+    decimal     total_metrage
+    decimal     actual_output
+    decimal     unit_price
+    decimal     gross_amount
+    decimal     discount
+    decimal     net_amount
+}
+
+PRODUCT ||--o{ PRODUCT_VARIANT : "has variants"
+SALE ||--|{ SALE_LINE : "contains"
+SALE_LINE }o--|| PRODUCT_VARIANT : "references"
+
+%% ── CRM SERVICE ────────────────────────────────────────────────
+CLIENT {
+    uuid        id              PK
+    string      name
+    string      phone           UK
+    string      address
+    string      zone
+    uuid        assigned_commercial_id  "ref USER"
+    enum        status          "NEW|ACTIVE|INACTIVE|PROSPECT"
+    enum        partner_tier    "BRONZE|SILVER|GOLD"
+    decimal     cumulative_volume_30d
+    timestamp   last_visit
+    timestamp   last_purchase
+    timestamp   created_at
+}
+
+CLIENT_VISIT {
+    uuid        id              PK
+    uuid        client_id       FK
+    uuid        commercial_id   "ref USER"
+    timestamp   visit_date
+    enum        visit_type      "GROSSISSEMENT|CONQUETE|RELANCE|FIDELISATION"
+    enum        result          "ORDER|INTEREST|REFUSAL|ABSENT"
+    string      notes
+}
+
+CLIENT ||--o{ CLIENT_VISIT : "receives visits"
+
+%% ── COMMISSION SERVICE ─────────────────────────────────────────
+COMMISSION_GRID {
+    uuid        id              PK
+    string      product_category
+    decimal     thickness_min
+    decimal     thickness_max
+    decimal     monthly_volume_min
+    decimal     monthly_volume_max
+    decimal     rate_percent
+    date        effective_from
+    boolean     is_active
+}
+
+COMMISSION_ENTRY {
+    uuid        id              PK
+    uuid        salesperson_id  "ref USER"
+    uuid        sale_id         "ref SALE"
+    uuid        sale_line_id    "ref SALE_LINE"
+    decimal     base_amount
+    decimal     rate_applied
+    decimal     commission_amount
+    date        calculation_date
+    enum        status          "PENDING|VALIDATED|PAID"
+}
+
+COMMISSION_DAILY_SUMMARY {
+    uuid        id              PK
+    uuid        salesperson_id  "ref USER"
+    date        summary_date    UK
+    decimal     total_sales
+    decimal     total_commission
+    int         sale_count
+    decimal     cumul_month
+}
+
+COMMISSION_GRID ||--o{ COMMISSION_ENTRY : "applies to"
+COMMISSION_ENTRY }o--|| COMMISSION_DAILY_SUMMARY : "aggregated in"
+
+%% ── PLANNING SERVICE ───────────────────────────────────────────
+WEEKLY_PLAN {
+    uuid        id              PK
+    int         week_number
+    int         year
+    enum        theme_monday    "GROSSISSEMENT|CONQUETE|RELANCE|FIDELISATION|BILAN"
+    enum        theme_tuesday   "GROSSISSEMENT|CONQUETE|RELANCE|FIDELISATION|BILAN"
+    enum        theme_wednesday "GROSSISSEMENT|CONQUETE|RELANCE|FIDELISATION|BILAN"
+    enum        theme_thursday  "GROSSISSEMENT|CONQUETE|RELANCE|FIDELISATION|BILAN"
+    enum        theme_friday    "GROSSISSEMENT|CONQUETE|RELANCE|FIDELISATION|BILAN"
+    uuid        manager_id      "ref USER"
+    timestamp   created_at
+}
+
+FREE_DELIVERY {
+    uuid        id              PK
+    uuid        weekly_plan_id  FK
+    uuid        client_id       "ref CLIENT"
+    uuid        commercial_id   "ref USER"
+    enum        status          "PLANNED|DELIVERED|CANCELLED"
+    uuid        approved_by     "ref USER"
+    timestamp   delivery_date
+    string      notes
+}
+
+WEEKLY_PLAN ||--o{ FREE_DELIVERY : "includes"
+
+%% ── RISTOURNE SERVICE ──────────────────────────────────────────
+PARTNER_TIER_CONFIG {
+    uuid        id              PK
+    enum        tier            "BRONZE|SILVER|GOLD"
+    decimal     volume_threshold
+    decimal     discount_rate
+    boolean     free_delivery_priority
+    boolean     dedicated_support
+    boolean     exclusive_offers_access
+    date        effective_from
+}
+
+RISTOURNE_ENTRY {
+    uuid        id              PK
+    uuid        client_id       "ref CLIENT"
+    uuid        sale_id         "ref SALE"
+    enum        tier_applied    "BRONZE|SILVER|GOLD"
+    decimal     discount_amount
+    timestamp   applied_at
+}
+
+PARTNER_TIER_CONFIG ||--o{ RISTOURNE_ENTRY : "governs"
+
+%% ── STOCK SERVICE ──────────────────────────────────────────────
+DEPOT {
+    uuid        id              PK
+    string      name
+    string      location
+    boolean     is_active
+}
+
+STOCK_ITEM {
+    uuid        id              PK
+    uuid        product_variant_id  "ref PRODUCT_VARIANT"
+    uuid        depot_id        FK
+    decimal     quantity_available
+    string      unit            "ML|UNIT"
+    timestamp   last_updated
+    timestamp   last_alert
+}
+
+STOCK_MOVEMENT {
+    uuid        id              PK
+    uuid        stock_item_id   FK
+    uuid        sale_id         "ref SALE (if OUT)"
+    enum        movement_type   "IN|OUT|ADJUSTMENT"
+    decimal     quantity
+    string      reason
+    uuid        created_by      "ref USER"
+    timestamp   movement_date
+}
+
+DEPOT ||--o{ STOCK_ITEM : "holds"
+STOCK_ITEM ||--o{ STOCK_MOVEMENT : "tracks"
+
+%% ── CONTENT SERVICE ────────────────────────────────────────────
+CONTENT_RESOURCE {
+    uuid        id              PK
+    string      title
+    string      description
+    enum        category        "INSTALLATION|PRODUIT|SECURITE|USAGE"
+    string      file_url
+    enum        file_type       "VIDEO|PDF|IMAGE"
+    boolean     is_active
+    uuid        uploaded_by     "ref USER"
+    timestamp   created_at
+}
+
+CONTENT_DELIVERY {
+    uuid        id              PK
+    uuid        resource_id     FK
+    uuid        client_id       "ref CLIENT"
+    uuid        sent_by         "ref USER"
+    enum        channel         "WHATSAPP|SMS|EMAIL"
+    timestamp   sent_at
+    enum        status          "SENT|FAILED"
+}
+
+CONTENT_RESOURCE ||--o{ CONTENT_DELIVERY : "sent via"
+
+%% ── NOTIFICATION SERVICE ───────────────────────────────────────
+NOTIFICATION_LOG {
+    uuid        id              PK
+    uuid        recipient_id    "ref USER"
+    enum        channel         "PUSH|SMS|EMAIL"
+    string      title
+    string      body
+    enum        type            "COMMISSION_DAILY|VISIT_REMINDER|TIER_UPGRADE|STOCK_ALERT|WEEKLY_PLAN"
+    enum        status          "PENDING|SENT|FAILED"
+    timestamp   sent_at
+    timestamp   created_at
+}
